@@ -1,0 +1,8 @@
+%h2
+  =@article.title
+%div
+  .date
+    = @article.created_at.strftime("%d %b %Y %H:%M")
+  =@article.body
+  .actions
+    %a.btn.btn-default{:href => "/articles/#{@article.id}/edit"} Edit

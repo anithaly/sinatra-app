@@ -1,0 +1,20 @@
+#header
+  %h1
+    Articles
+  %ul.nav.nav-pills
+    %li
+      %a.btn.btn-primary{:href => "/articles/new"} Create article
+
+.container
+  .row
+    -for a in @articles do
+      .well.col-lg-12.col-md-12.col-sm-12.col-xs-12
+        %h3= a.title
+        .date
+          = a.created_at.strftime("%d %b %Y %H:%M")
+        %p= a.title
+        .actions
+          %a.btn.btn-default{:href => "/articles/#{a.id}"} Show
+          %a.btn.btn-default{:href => "/articles/#{a.id}/edit"} Edit
+          %form.inline(action="/articles/#{a.id}/destroy" method="post")
+            %input.btn.btn-default{:value => "Delete", :type => "submit" }

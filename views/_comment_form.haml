@@ -1,0 +1,6 @@
+%form{role: "form", action: "/comment/create/#{@article.id}", method: :post}
+  .form-group
+    %label{:for => "body"} Text
+    %textarea#body.form-control{:name => "comment[body]", :placeholder => "Enter comment" }
+      = @comment.body
+  %button.btn.btn-default{:type => "submit"} Save

@@ -12,7 +12,9 @@
         %h3= a.title
         .date
           = a.created_at.strftime("%d %b %Y %H:%M")
-        %p= a.title
+        %p
+          Komentarze:
+          = a.comments.count
         .actions
           %a.btn.btn-default{:href => "/articles/#{a.id}"} Show
           %a.btn.btn-default{:href => "/articles/#{a.id}/edit"} Edit

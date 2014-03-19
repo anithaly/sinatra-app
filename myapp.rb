@@ -1,17 +1,32 @@
-require "bundler/setup"
+require 'bundler/setup'
 require 'rubygems'
-require "sinatra"
-require "sinatra/partial"
+require 'sinatra'
+require 'sinatra/partial'
 require 'sinatra/contrib'
 require "sinatra/reloader" if development?
-require 'data_mapper' # metagem, requires common plugins too.
+
+# require 'rack-flash'
+
+require 'data_mapper'
 require 'dm-core'
 require 'dm-migrations'
+require 'bcrypt'
+
 require 'pry'
 
-SITE_TITLE = "Sinatra app"
+# use Rack::Flash
+# somewhere in a haml view:
+# = flash[:notice]
+# = flash[:error]
 
-enable :sessions
+use Rack::Session::Cookie, :secret => 'sth secret'
+# enable :sessions
+
+# flash messages
+# use Rack::Flash
+
+
+SITE_TITLE = "Sinatra app"
 
 # need install dm-sqlite-adapter
 DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blog.db")
@@ -19,49 +34,121 @@ DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blog.db")
 class Article
     include DataMapper::Resource
     property :id, Serial
-    # property :user_id, Integer
-    property :title, String
+    property :title, String, :length => 3..255
     property :body, Text
+    property :visible, Boolean
     property :created_at, DateTime
     has n, :comments
+    belongs_to :user
 end
 
 class Comment
     include DataMapper::Resource
     property :id, Serial
-    # property :user_id, Integer
-    belongs_to :article #, :required => false
-    # property   :article_id, Integer
     property :body, Text
+    property :created_at, DateTime
+    belongs_to :user
+    belongs_to :article
+    # property   :article_id, Integer, :required => false
+end
+
+class User
+    include DataMapper::Resource
+    property :id, Serial, :key => true
+    property :name, String, :length => 3..50
+    property :email, String
+    property :password, BCryptHash
     property :created_at, DateTime
 end
 
-# class User
-#     include DataMapper::Resource
-#     property :id, Serial
-#     property :name, String
-#     property :email, String
-#     property :created_at, DateTime
-# end
-
+# Perform basic sanity checks and initialize all relationships
+# Call this when you've defined all your models
+DataMapper.finalize
+# automatically create the tables
 DataMapper.auto_upgrade!
 
-# # Perform basic sanity checks and initialize all relationships
-# # Call this when you've defined all your models
-DataMapper.finalize
-
-# # automatically create the tables
 # Article.auto_upgrade!
-Article.auto_migrate!
-Comment.auto_migrate!
-# User.auto_upgrade!
+# Comment.auto_upgrade!
+#User.auto_upgrade!
 
-set :haml, :format => :html5, :layout_engine => :haml, :layout => :layout
+# Article.auto_migrate!
+# Comment.auto_migrate!
+# User.auto_migrate!
+
+configure do
+  set :haml, :format => :html5, :layout_engine => :haml, :layout => :layout
+end
+
+
+# routes
+#
+#
+# users
+#
+userTable = {}
+
+helpers do
+
+  def login?
+    if session[:username].nil?
+      return false
+    else
+      return true
+    end
+  end
+
+  def username
+    return session[:username]
+  end
+
+end
+
+get "/signin" do
+  haml :signin
+end
+
+get "/signup" do
+  haml :signup
+end
+
+post "/signup" do
+  password_salt = BCrypt::Engine.generate_salt
+  password_hash = BCrypt::Engine.hash_secret(params[:password], password_salt)
+
+  #ideally this would be saved into a database, hash used just for sample
+  userTable[params[:username]] = {
+    :salt => password_salt,
+    :passwordhash => password_hash
+  }
+
+  session[:username] = params[:username]
+  redirect "/"
+end
+
+post "/login" do
+  if userTable.has_key?(params[:username])
+    user = userTable[params[:username]]
+    if user[:passwordhash] == BCrypt::Engine.hash_secret(params[:password], user[:salt])
+      session[:username] = params[:username]
+      redirect "/"
+    end
+  end
+  haml :error
+end
+
+get "/logout" do
+  session[:username] = nil
+  redirect "/"
+end
+
+# homepage
 
 get '/' do
   @title = 'Welcome!'
   haml :index, :locals => {:title => @title}
 end
+
+# about
 
 get '/about' do
   @title = 'About'
@@ -148,9 +235,21 @@ post '/comment/create/:article_id' do
   redirect "/articles/#{article.id}"
 end
 
-  not_found do
-    halt 404, 'page not found'
-  end
+#users
+
+# DEFAULT ROUTES:
+
+# get '/login'
+# get '/logout'
+# get '/signup'
+# get/post '/users'
+# get '/users/:id'
+# get/post '/users/:id/edit'
+# get '/users/:id/delete'
+
+not_found do
+  halt 404, 'Page not found'
+end
 
 =begin
   comments

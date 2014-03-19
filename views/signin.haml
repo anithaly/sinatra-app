@@ -1,0 +1,10 @@
+%h1 Log in
+
+%form{role: "form", action: "/login", method: :post}
+  .form-group
+    %label{:for => "username"} Username
+    %input#username.form-control{:placeholder => "Enter username", :name => "username", :type => "text" }
+  .form-group
+    %label{:for => "password"} Password
+    %input#password.form-control{:placeholder => "Enter password", :name => "password", :type => "password" }
+  %button.btn.btn-default{:type => "submit"} Log in

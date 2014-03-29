@@ -3,8 +3,8 @@ require 'rubygems'
 require 'sinatra'
 require 'sinatra/partial'
 require 'sinatra/contrib'
-require "sinatra/reloader" if development?
-
+# require "sinatra/reloader" if development?
+require 'json'
 # require 'rack-flash'
 
 require 'data_mapper'
@@ -19,7 +19,7 @@ require 'pry'
 # = flash[:notice]
 # = flash[:error]
 
-use Rack::Session::Cookie, :secret => 'sth secret'
+# use Rack::Session::Cookie, :secret => 'sth secret'
 # enable :sessions
 
 # flash messages
@@ -34,12 +34,12 @@ DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blog.db")
 class Article
     include DataMapper::Resource
     property :id, Serial
-    property :title, String, :length => 3..255
+    property :title, String#, :length => 3..255
     property :body, Text
     property :visible, Boolean
     property :created_at, DateTime
     has n, :comments
-    belongs_to :user
+    # belongs_to :user
 end
 
 class Comment
@@ -47,19 +47,19 @@ class Comment
     property :id, Serial
     property :body, Text
     property :created_at, DateTime
-    belongs_to :user
+    # belongs_to :user
     belongs_to :article
     # property   :article_id, Integer, :required => false
 end
 
-class User
-    include DataMapper::Resource
-    property :id, Serial, :key => true
-    property :name, String, :length => 3..50
-    property :email, String
-    property :password, BCryptHash
-    property :created_at, DateTime
-end
+# class User
+#     include DataMapper::Resource
+#     property :id, Serial, :key => true
+#     property :name, String, :length => 3..50
+#     property :email, String
+#     property :password, BCryptHash
+#     property :created_at, DateTime
+# end
 
 # Perform basic sanity checks and initialize all relationships
 # Call this when you've defined all your models
@@ -69,7 +69,7 @@ DataMapper.auto_upgrade!
 
 # Article.auto_upgrade!
 # Comment.auto_upgrade!
-#User.auto_upgrade!
+# User.auto_upgrade!
 
 # Article.auto_migrate!
 # Comment.auto_migrate!
@@ -85,61 +85,61 @@ end
 #
 # users
 #
-userTable = {}
+# userTable = {}
 
-helpers do
+# helpers do
 
-  def login?
-    if session[:username].nil?
-      return false
-    else
-      return true
-    end
-  end
+#   def login?
+#     if session[:username].nil?
+#       return false
+#     else
+#       return true
+#     end
+#   end
 
-  def username
-    return session[:username]
-  end
+#   def username
+#     return session[:username]
+#   end
 
-end
+# end
 
-get "/signin" do
-  haml :signin
-end
+# get "/signin" do
+#   haml :signin
+# end
 
-get "/signup" do
-  haml :signup
-end
+# get "/signup" do
+#   haml :signup
+# end
 
-post "/signup" do
-  password_salt = BCrypt::Engine.generate_salt
-  password_hash = BCrypt::Engine.hash_secret(params[:password], password_salt)
+# post "/signup" do
+#   password_salt = BCrypt::Engine.generate_salt
+#   password_hash = BCrypt::Engine.hash_secret(params[:password], password_salt)
 
-  #ideally this would be saved into a database, hash used just for sample
-  userTable[params[:username]] = {
-    :salt => password_salt,
-    :passwordhash => password_hash
-  }
+#   #ideally this would be saved into a database, hash used just for sample
+#   userTable[params[:username]] = {
+#     :salt => password_salt,
+#     :passwordhash => password_hash
+#   }
 
-  session[:username] = params[:username]
-  redirect "/"
-end
+#   session[:username] = params[:username]
+#   redirect "/"
+# end
 
-post "/login" do
-  if userTable.has_key?(params[:username])
-    user = userTable[params[:username]]
-    if user[:passwordhash] == BCrypt::Engine.hash_secret(params[:password], user[:salt])
-      session[:username] = params[:username]
-      redirect "/"
-    end
-  end
-  haml :error
-end
+# post "/login" do
+#   if userTable.has_key?(params[:username])
+#     user = userTable[params[:username]]
+#     if user[:passwordhash] == BCrypt::Engine.hash_secret(params[:password], user[:salt])
+#       session[:username] = params[:username]
+#       redirect "/"
+#     end
+#   end
+#   haml :error
+# end
 
-get "/logout" do
-  session[:username] = nil
-  redirect "/"
-end
+# get "/logout" do
+#   session[:username] = nil
+#   redirect "/"
+# end
 
 # homepage
 
@@ -164,23 +164,6 @@ get '/articles' do
   haml :list
 end
 
-#form for new article
-get '/articles/new' do
-  haml :new, :locals => {
-    :article => Article.new,
-    :action => '/articles/create'
-  }
-end
-
-#create an article
-post '/articles/create' do
-  # article = Article.create(:title => params[:title], :body => params[:body])
-  article = Article.new
-  article.attributes = params['article']
-  article.save
-  redirect "/articles/#{article.id}"
-end
-
 #show an article
 get '/articles/:id' do
   # @article = Article.find params[:id]
@@ -189,29 +172,64 @@ get '/articles/:id' do
   haml :show
 end
 
+#admin
+
+#list of articles
+get '/admin/articles' do
+  @title = 'List of articles'
+  @articles = Article.all(:order => [ :id.desc ], :limit => 20)
+  haml :admin_list
+end
+
+#form for new article
+get '/admin/articles/new' do
+  haml :new, :locals => {
+    :article => Article.new,
+    :action => '/admin/articles/create'
+  }
+end
+
+#create an article
+post '/admin/articles/create' do
+  # article = Article.create(:title => params[:title], :body => params[:body])
+  article = Article.new
+  article.attributes = params['article']
+  article.save
+  redirect "/admin/articles/#{article.id}"
+end
+
+#show an article
+get '/admin/articles/:id' do
+  # @article = Article.find params[:id]
+  @article = Article.get params[:id]
+  @comment = Comment.new
+  haml :admin_show
+end
+
 #form to edit article
-get '/articles/:id/edit' do|id|
+get '/admin/articles/:id/edit' do |id|
  article = Article.get(id)
  haml :edit, :locals => {
   :article => article,
-  :action => "/articles/#{article.id}/update"
+  :action => "/admin/articles/#{article.id}/update"
  }
 end
 
 # Edit a article
-post '/articles/:id/update' do|id|
+post '/admin/articles/:id/update' do |id|
  article = Article.get(id)
  article.update params[:article]
 
- redirect "/articles/#{id}"
+ redirect "/admin/articles/#{id}"
 end
 
  # Delete a article
-post '/articles/:id/destroy' do|id|
+post '/admin/articles/:id/destroy' do |id|
  article = Article.get(id)
  article.destroy
-
- redirect "/articles"
+ content_type :json
+ { :id => id }.to_json
+ # redirect "/admin/articles"
 end
 
 #comments

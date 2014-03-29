@@ -5,6 +5,7 @@ gem 'sinatra-contrib'
 gem 'sinatra-partial'
 
 gem 'haml'
+gem 'json'
 
 gem 'data_mapper'
 gem 'dm-sqlite-adapter'

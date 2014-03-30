@@ -160,7 +160,7 @@ end
 #list of articles
 get '/articles' do
   @title = 'List of articles'
-  @articles = Article.all(:order => [ :id.desc ], :limit => 20)
+  @articles = Article.all(:order => [ :id.desc ], :ispublic => true)
   haml :list
 end
 
@@ -179,7 +179,7 @@ end
 #list of articles
 get '/admin/articles' do
   @title = 'List of articles'
-  @articles = Article.all(:order => [ :id.desc ], :limit => 20)
+  @articles = Article.all(:order => [ :id.desc ])
   haml :admin_list
 end
 

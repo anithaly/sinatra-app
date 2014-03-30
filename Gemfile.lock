@@ -99,6 +99,7 @@ DEPENDENCIES
   dm-migrations
   dm-sqlite-adapter
   haml
+  json
   pry
   sinatra
   sinatra-contrib

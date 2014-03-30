@@ -215,39 +215,48 @@ end
 
 #form to edit article
 get '/admin/articles/:id/edit' do |id|
- @article = Article.get(id)
- haml :edit, :locals => {
-  :action => "/admin/articles/#{@article.id}/update"
- }
+  @article = Article.get(id)
+  haml :edit, :locals => {
+    :action => "/admin/articles/#{@article.id}/update"
+  }
 end
 
 # Edit a article
 post '/admin/articles/:id/update' do |id|
  @article = Article.get(id)
- @article.update params[:article]
 
- redirect "/admin/articles/#{id}"
+ if @article.update params[:article]
+   redirect "/admin/articles/#{id}"
+ else
+    haml :edit, :locals => {
+      :action => '/admin/articles/#{@article}/edit'
+    }
+  end
 end
 
 # publish a article
 post '/admin/articles/:id/publish' do |id|
- article = Article.get(id)
- article.ispublic = params[:ispublic]
- article.save
-
- content_type :json
- { :id => id, :ispublic => article.ispublic }.to_json
- # redirect "/admin/articles/#{id}"
+  article = Article.get(id)
+  article.ispublic = params[:ispublic]
+  content_type :json
+  if article.valid?
+    article.save
+    { :id => id, :ispublic => article.ispublic }.to_json
+  else
+    status 400
+    "Article not valid"
+  end
+  # redirect "/admin/articles/#{id}"
 end
 
  # Delete a article
 post '/admin/articles/:id/destroy' do |id|
- article = Article.get(id)
- article.destroy
+  article = Article.get(id)
+  article.destroy
 
- content_type :json
- { :id => id }.to_json
- # redirect "/admin/articles"
+  content_type :json
+  { :id => id }.to_json
+  # redirect "/admin/articles"
 end
 
 #comments

@@ -25,6 +25,9 @@ $(document).ready(function() {
         $(form).attr('ispublic', (data.ispublic) ? 0 : 1 );
         $(form).find('input').val((data.ispublic) ? 'Hide from public view' : 'Publish')
       },
+      error: function(jqXHR, textStatus, errorThrown) {
+        $('#errors').html(errorThrown);
+      },
       dataType: 'json'
     });
   });

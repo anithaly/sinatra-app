@@ -1,9 +1,14 @@
+- if @article.errors.size > 0
+  .well.text-danger
+    - for e in @article.errors.full_messages.flatten
+      = e
+      %br/
 %form{role: "form", action: "#{action}", method: :post}
   .form-group
     %label{:for => "title"} Title
-    %input#title.form-control{:placeholder => "Enter title", :name => "article[title]", :type => "text", :value => "#{article.title}" }
+    %input#title.form-control{:placeholder => "Enter title", :name => "article[title]", :type => "text", :value => "#{@article.title}" }
   .form-group
     %label{:for => "body"} Text
     %textarea#body.form-control{:name => "article[body]", :placeholder => "Enter text" }
-      = article.body
+      = @article.body
   %button.btn.btn-default{:type => "submit"} Save

@@ -34,9 +34,9 @@ DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blog.db")
 class Article
     include DataMapper::Resource
     property :id, Serial
-    property :title, String#, :length => 3..255
-    property :body, Text
-    property :visible, Boolean
+    property :title, String, :required => true, :length => 3..255
+    property :body, Text, :required => true
+    property :ispublic, Boolean, :default  => false
     property :created_at, DateTime
     has n, :comments
     # belongs_to :user
@@ -45,7 +45,7 @@ end
 class Comment
     include DataMapper::Resource
     property :id, Serial
-    property :body, Text
+    property :body, Text, :required => true
     property :created_at, DateTime
     # belongs_to :user
     belongs_to :article
@@ -169,7 +169,9 @@ get '/articles/:id' do
   # @article = Article.find params[:id]
   @article = Article.get params[:id]
   @comment = Comment.new
-  haml :show
+  haml :show, :locals => {
+    :action => "/comment/create/#{@article.id}"
+  }
 end
 
 #admin
@@ -183,8 +185,8 @@ end
 
 #form for new article
 get '/admin/articles/new' do
+  @article = Article.new
   haml :new, :locals => {
-    :article => Article.new,
     :action => '/admin/articles/create'
   }
 end
@@ -192,15 +194,20 @@ end
 #create an article
 post '/admin/articles/create' do
   # article = Article.create(:title => params[:title], :body => params[:body])
-  article = Article.new
-  article.attributes = params['article']
-  article.save
-  redirect "/admin/articles/#{article.id}"
+  @article = Article.new
+  @article.attributes = params['article']
+  if @article.valid?
+    @article.save
+    redirect "/admin/articles/#{@article.id}"
+  else
+    haml :new, :locals => {
+      :action => '/admin/articles/create'
+    }
+  end
 end
 
 #show an article
 get '/admin/articles/:id' do
-  # @article = Article.find params[:id]
   @article = Article.get params[:id]
   @comment = Comment.new
   haml :admin_show
@@ -208,25 +215,36 @@ end
 
 #form to edit article
 get '/admin/articles/:id/edit' do |id|
- article = Article.get(id)
+ @article = Article.get(id)
  haml :edit, :locals => {
-  :article => article,
-  :action => "/admin/articles/#{article.id}/update"
+  :action => "/admin/articles/#{@article.id}/update"
  }
 end
 
 # Edit a article
 post '/admin/articles/:id/update' do |id|
- article = Article.get(id)
- article.update params[:article]
+ @article = Article.get(id)
+ @article.update params[:article]
 
  redirect "/admin/articles/#{id}"
+end
+
+# publish a article
+post '/admin/articles/:id/publish' do |id|
+ article = Article.get(id)
+ article.ispublic = params[:ispublic]
+ article.save
+
+ content_type :json
+ { :id => id, :ispublic => article.ispublic }.to_json
+ # redirect "/admin/articles/#{id}"
 end
 
  # Delete a article
 post '/admin/articles/:id/destroy' do |id|
  article = Article.get(id)
  article.destroy
+
  content_type :json
  { :id => id }.to_json
  # redirect "/admin/articles"
@@ -234,23 +252,24 @@ end
 
 #comments
 
-#form for new comment
-get '/comments/new' do
-  haml :new, :locals => {
-    :article => Comment.new,
-  }
-end
-
 #create an comment
 post '/comment/create/:article_id' do
   # article = Comment.create(:body => params[:body], :post_id => params[:article_id])
-  article = Article.get(params[:article_id])
+  @article = Article.get(params[:article_id])
 
-  comment = Comment.new
-  comment.attributes = params[:comment]
-  comment.article = article
-  comment.save
-  redirect "/articles/#{article.id}"
+  @comment = Comment.new
+  @comment.attributes = params[:comment]
+  @comment.article = @article
+
+  if @comment.valid? # it also checks article.valid?
+    @comment.save
+    redirect "/articles/#{@article.id}"
+  else
+    haml :show, :locals => {
+      :action => "/comment/create/#{@article.id}"
+    }
+  end
+
 end
 
 #users

@@ -8,16 +8,19 @@ $(document).ready(function() {
     });
   });
 
-  $(".public").click(function(e) {
+  $(".publish").click(function(e) {
     e.preventDefault();
-
-    url = this.attr('action');
-
+    url = $(this).attr('action');
+    ispublic = $(this).attr('ispublic');
     $.ajax({
       type: "POST",
       url: url,
-      data: {},
-      success: function() {},
+      data: {
+        ispublic: ispublic
+      },
+      success: function() {
+
+      },
       dataType: 'json'
     });
   });

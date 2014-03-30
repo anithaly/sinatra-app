@@ -1,4 +1,9 @@
-%form{role: "form", action: "/comment/create/#{@article.id}", method: :post}
+- if @comment.errors.size > 0
+  .well.text-danger
+    - for e in @comment.errors.full_messages.flatten
+      = e
+      %br/
+%form{role: "form", action: action, method: :post}
   .form-group
     %label{:for => "body"} Text
     %textarea#body.form-control{:name => "comment[body]", :placeholder => "Enter comment" }

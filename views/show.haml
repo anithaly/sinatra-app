@@ -1,18 +1,17 @@
-.container
-  %h2
-    =@article.title
-  %div
-    .date
-      = @article.created_at.strftime("%d %b %Y %H:%M")
-    =@article.body
+%h2
+  =@article.title
+%div
+  .date
+    = @article.created_at.strftime("%d %b %Y %H:%M")
+  =@article.body
 
-  %hr/
+%hr/
 
-  %h4 Comments
+%h4 Comments
 
-  %ul
-    -for comment in @article.comments
-      %li
-        =comment.body
+%ul
+  -for c in @article.comments
+    %li
+      =c.body
 
-  =partial "_comment_form", locals: {article: @article }
+=partial "_comment_form", locals: { action: action }

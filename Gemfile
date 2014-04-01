@@ -12,7 +12,9 @@ gem 'dm-sqlite-adapter'
 gem 'dm-core'
 gem 'dm-migrations'
 
-# gem 'rack-flash'
-gem 'bcrypt'
+# gem 'rack-flash' does not work
+gem 'sinatra-flash'
+
+gem 'sinatra-authentication'
 
 gem 'pry'

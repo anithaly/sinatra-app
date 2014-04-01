@@ -1,0 +1,14 @@
+- if @user.errors.size > 0
+  .well.text-danger
+    - for e in @user.errors.full_messages.flatten
+      = e
+      %br/
+
+%form{role: "form", action: "/users/#{@user.id}/edit", method: :post}
+  .form-group
+    %label{:for => "email"} Email
+    %input#email.form-control{:placeholder => "Enter email", :name => "user[email]", :type => "text", :value => @user.email }
+  .form-group
+    %label{:for => "password"} Password
+    %input#password.form-control{:placeholder => "Enter password", :name => "user[password]", :type => "password" }
+  %button.btn.btn-default{:type => "submit"} Save

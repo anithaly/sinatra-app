@@ -1,0 +1,12 @@
+%h1 Sign up
+%form{role: "form", action: "/signup", method: :post}
+  .form-group
+    %label{:for => "email"} Email
+    %input#email.form-control{:placeholder => "Enter email", :name => "user[email]", :type => "text" }
+  .form-group
+    %label{:for => "password"} Password
+    %input#password.form-control{:placeholder => "Enter password", :name => "user[password]", :type => "password" }
+  .form-group
+    %label{:for => "password-confirmation"} Password
+    %input#password-confirmation.form-control{:placeholder => "Repeat password", :name => "user[password_confirmation]", :type => "password" }
+  %button.btn.btn-default{:type => "submit"} Sign up

@@ -12,27 +12,34 @@
       .container
         .navbar-header
           %a.navbar-brand{:href => "/"} Sinatra App
+          / = render_login_logout
         .collapse.navbar-collapse
           %ul.nav.navbar-nav
             %li.active
               %a{:href => "/"} Home
-            %li
-              %a{:href => "/articles"} Articles
+            -if logged_in?
+              %li
+                %a{:href => "/admin/articles"} Admin Articles
+            -else
+              %li
+                %a{:href => "/articles"} Articles
             %li
               %a{:href => "/about"} About
-          / %ul.nav.navbar-nav.navbar-right
-          /   -if login?
-          /     %li
-          /       %a.navbar-brand{:href => "/user"} Account (#{username})
-          /     %li
-          /       %a{:href => "/logout"} Logout
-          /   -else
-          /     %li
-          /       %a{:href => "/signup"} Sign up
-          /     %li
-          /       %a{:href => "/signin"} Sign in
+          %ul.nav.navbar-nav.navbar-right
+            -if logged_in?
+              %li
+                %a.navbar-brand{:href => "/users/#{current_user.id}"} Account (#{current_user.email})
+              %li
+                %a{:href => "/logout"} Logout
+            -else
+              %li
+                %a{:href => "/signup"} Sign up
+              %li
+                %a{:href => "/login"} Login
     %div.container
       #errors.text-danger
+        = flash[:notice]
+        = flash[:error]
       #content= yield
       .footer
         %hr/

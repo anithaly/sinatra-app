@@ -1,0 +1,17 @@
+%ul#nav.nav.nav-sidebar
+  %li.dropdown
+    %a{:href => "#", :'data-toggle' => "dropdown", :'data-target' => "#"}
+      Articles
+      .span.caret
+    %ul.dropdown-menu{:role => "menu"}
+      %li
+        %a{:href => "/admin/articles"} Lista
+      %li.divider{:role => "presentation"}
+      %li
+        %a{:href => "/admin/articles/new"} Nowy
+  %li
+    %a{:href => "#"} Categories
+  %li
+    %a{:href => "#"} Tags
+  %li
+    %a{:href => "/admin/users"} Users

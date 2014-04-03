@@ -1,5 +1,6 @@
-.jumbotron
-  %h1 Example Sinatra App
-  %p.lead Application created as an example for webmuses's weekly group
-  / %p
-  /   %a.btn.btn-lg.btn-success{:href => "#", :role => "button"} Sign up
+-if current_user
+  Welcome #{current_user.email}!
+- else
+  .jumbotron
+    %h1 Example Sinatra App
+    %p.lead Application created as an example for webmuses's weekly working group

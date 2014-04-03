@@ -1,14 +1,12 @@
-#header
-  %h1
-    Articles
-.row.col-lg-12
-  .articles.container-fluid
-    -@articles.each_with_index do |a, key|
-      %article.well.col-lg-5.article{:id => "article#{a.id}", :class => "#{ (key%2 == 1) ? 'col-md-offset-2' : '' }"}
-        %h3
-          %a{:href => "/articles/#{a.id}"} #{a.title}
-        .date
-          = a.created_at.strftime("%d %b %Y %H:%M")
-        %p
-          Comments:
-          = a.comments.count
+%h1.page-header
+  Articles
+.articles
+  -@articles.each_with_index do |a, key|
+    %article{:id => "article#{a.id}", :class => "#{ (key%2 == 1) ? 'col-md-offset-2' : '' }"}
+      %h3
+        %a{:href => "/articles/#{a.id}"} #{a.title}
+      .date
+        = a.created_at.strftime("%d %b %Y %H:%M")
+      %p
+        Comments:
+        = a.comments.count

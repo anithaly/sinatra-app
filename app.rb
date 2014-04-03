@@ -1,80 +1,48 @@
-require 'bundler/setup'
-require 'rubygems'
-require 'sinatra'
-require 'sinatra/partial'
-require 'sinatra/contrib'
-# require "sinatra/reloader" if development?
-require 'json'
-
-#db
-require 'data_mapper'
-require 'dm-core'
-require 'dm-migrations'
-
-#authentication
-require 'sinatra/flash'
-require "sinatra-authentication"
-require "digest/sha1"
-
-#debug
-require 'pry'
+require 'bundler'
+Bundler.require
 
 SITE_TITLE = "Sinatra app"
 
-# configure do
-  enable :reloader
-  # register Sinatra::Reloader
-  set :port, 4567
-  set :environment, 'development'
-  # set :public, 'public'
-  # set :views,  'views'
-  set :haml, :format => :html5, :layout_engine => :haml, :layout => :layout
-  # enable :sessions
-  set :template_engine, :haml
-  set :sinatra_authentication_view_path, Pathname(__FILE__).dirname.expand_path + "views/users"
-
-# also_reload '/path/to/some/file'
-# dont_reload '/path/to/other/file'
-# end
-
-
 # need install dm-sqlite-adapter
 DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blog.db")
-use Rack::Session::Cookie, :secret => "heyhihello"
 
 class Article
-    include DataMapper::Resource
-    property :id, Serial
-    property :title, String, :required => true, :length => 3..255
-    property :body, Text, :required => true
-    property :ispublic, Boolean, :default  => false
-    property :created_at, DateTime
-    has n, :comments
-    # belongs_to :user
+  include DataMapper::Resource
+  property :id, Serial
+  property :title, String, :required => true, :length => 3..255
+  property :body, Text, :required => true
+  property :ispublic, Boolean, :default  => false
+  property :created_at, DateTime
+  has n, :comments
+  # belongs_to :user
 end
 
 class Comment
-    include DataMapper::Resource
-    property :id, Serial
-    property :body, Text, :required => true
-    property :created_at, DateTime
-    # belongs_to :user
-    belongs_to :article
+  include DataMapper::Resource
+  property :id, Serial
+  property :body, Text, :required => true
+  property :created_at, DateTime
+  # belongs_to :user
+  belongs_to :article
 end
 
-class DmUser #for Datamapper: > DmUser
-  # include DataMapper::Resource
-  property :name, String
-  property :has_dog, Boolean, :default => false
+class User
+  include DataMapper::Resource
+  include BCrypt
+  property :id, Serial, :key => true
+  property :name, String, :length => 3..50
+  property :email, String, :length => 8..50
+  property :password, BCryptHash
+  property :created_at, DateTime
+
+  def authenticate(attempted_password)
+    if self.password == attempted_password
+      true
+    else
+      false
+    end
+  end
 end
-
-# class User
-#     include DataMapper::Resource
-#     property :id, Serial, :key => true
-#     property :name, String, :length => 3..50
-
-#     # property :created_at, DateTime
-# end
 
 # Perform basic sanity checks and initialize all relationships
 # Call this when you've defined all your models
@@ -83,196 +51,304 @@ DataMapper.finalize
 DataMapper.auto_upgrade!
 # DataMapper.auto_migrate!
 
-# Article.auto_upgrade!
-# Comment.auto_upgrade!
-# User.auto_upgrade!
+if User.count == 0
+  @user = User.create(email: "admin@it.works")
+  @user.password = "admin"
+  @user.save
+end
 
-# Article.auto_migrate!
-# Comment.auto_migrate!
-# User.auto_migrate!
+class SinatraApp < Sinatra::Base
 
+  configure do
+    # enable :sessions
+    use Rack::Session::Cookie, secret: "nothingissecretontheinternet"
+    use Rack::Flash, :sweep => true, accessorize: [:error, :success]
+    register Sinatra::Partial
+  end
 
-#
-# users
-#
-# userTable = {}
+  configure :development do
+    register Sinatra::Reloader
+    enable :reloader
+  end
 
-helpers do
+  use Warden::Manager do |config|
+    # Tell Warden how to save our User info into a session.
+    # Sessions can only take strings, not Ruby code, we'll store
+    # the User's `id`
+    config.serialize_into_session{|user| user.id }
+    # Now tell Warden how to take what we've stored in the session
+    # and get a User from that information.
+    config.serialize_from_session{|id| User.get(id) }
 
-  def login?
-    if session[:username].nil?
-      return false
+    config.scope_defaults :default,
+      # "strategies" is an array of named methods with which to
+      # attempt authentication. We have to define this later.
+      strategies: [:password],
+      # The action is a route to send the user to when
+      # warden.authenticate! returns a false answer. We'll show
+      # this route below.
+      action: 'unauthenticated'
+    # When a user tries to log in and cannot, this specifies the
+    # app to send the user to.
+    config.failure_app = self
+  end
+
+  Warden::Manager.before_failure do |env,opts|
+    env['REQUEST_METHOD'] = 'POST'
+  end
+
+  Warden::Strategies.add(:password) do
+    def valid?
+      params['email'] && params['password']
+    end
+
+    def authenticate!
+      user = User.first(email: params['email'])
+      # binding.pry
+      if user.nil?
+        fail!("The email you entered does not exist.")
+        env['warden.message'] = ""
+      elsif user.authenticate(params['password'])
+        env['warden.message'] = "Successfully Logged In"
+        success!(user)
+      else
+        fail!("Could not log in")
+      end
+    end
+
+  end
+
+  helpers do
+
+    def warden_handler
+      env['warden']
+    end
+
+    def current_user
+      warden_handler.user
+    end
+
+    def check_authentication
+      redirect '/login' unless warden_handler.authenticated?
+    end
+
+  end
+
+  #auth
+
+  post '/login' do
+    env['warden'].authenticate!
+    flash.success = env['warden'].message
+    if session[:return_to].nil?
+      redirect '/'
     else
-      return true
+      redirect session[:return_to]
     end
   end
 
-end
-
-
-# homepage
-
-get '/' do
-  @title = 'Welcome!'
-  haml :index, :locals => {:title => @title}
-end
-
-# about
-
-get '/about' do
-  @title = 'About'
-  haml :about
-end
-
-#articles
-
-#list of articles
-get '/articles' do
-  @title = 'List of articles'
-  @articles = Article.all(:order => [ :id.desc ], :ispublic => true)
-  haml :list
-end
-
-#show an article
-get '/articles/:id' do
-  @article = Article.get params[:id]
-  @comment = Comment.new
-  haml :show, :locals => {
-    :action => "/comment/create/#{@article.id}"
-  }
-end
-
-#admin
-
-#list of articles
-get '/admin/articles' do
-  login_required
-  @title = 'List of articles'
-  @articles = Article.all(:order => [ :id.desc ])
-  haml :admin_list
-end
-
-#form for new article
-get '/admin/articles/new' do
-  login_required
-  @article = Article.new
-  haml :new, :locals => {
-    :action => '/admin/articles/create'
-  }
-end
-
-#create an article
-post '/admin/articles/create' do
-  login_required
-  # article = Article.create(:title => params[:title], :body => params[:body])
-  @article = Article.new
-  @article.attributes = params['article']
-  if @article.valid?
-    @article.save
-    redirect "/admin/articles/#{@article.id}"
-  else
-    haml :new, :locals => {
-      :action => '/admin/articles/create'
-    }
+  get '/logout' do
+    env['warden'].raw_session.inspect
+    env['warden'].logout
+    flash.success = 'Successfully logged out'
+    redirect '/'
   end
-end
 
-#show an article
-get '/admin/articles/:id' do
-  login_required
-  @article = Article.get params[:id]
-  @comment = Comment.new
-  haml :admin_show
-end
-
-#form to edit article
-get '/admin/articles/:id/edit' do |id|
-  login_required
-  @article = Article.get(id)
-  haml :edit, :locals => {
-    :action => "/admin/articles/#{@article.id}/update"
-  }
-end
-
-# Edit a article
-post '/admin/articles/:id/update' do |id|
-  login_required
-  @article = Article.get(id)
-
-  if @article.update params[:article]
-   redirect "/admin/articles/#{id}"
-  else
-    haml :edit, :locals => {
-      :action => '/admin/articles/#{@article}/edit'
-    }
+  post '/unauthenticated' do
+    session[:return_to] = env['warden.options'][:attempted_path]
+    puts env['warden.options'][:attempted_path]
+    flash.error = env['warden'] || "You must log in"
+    redirect '/auth/login'
   end
-end
 
-# publish a article
-post '/admin/articles/:id/publish' do |id|
-  login_required
-  article = Article.get(id)
-  article.ispublic = params[:ispublic]
-  content_type :json
-  if article.valid?
-    article.save
-    { :id => id, :ispublic => article.ispublic }.to_json
-  else
-    status 400
-    "Article not valid"
+  get '/login' do
+    haml :'account/login'
   end
-  # redirect "/admin/articles/#{id}"
-end
 
- # Delete a article
-post '/admin/articles/:id/destroy' do |id|
-  login_required
-  article = Article.get(id)
-  article.destroy
+  #account
 
-  content_type :json
-  { :id => id }.to_json
-  # redirect "/admin/articles"
-end
+  get '/signup' do
+    haml :'account/signup'
+  end
 
-#comments
+  #show logged user
+  get '/account' do
+    # @user = User.get params[:id]
+    @user = current_user
+    haml :'account/show'
+  end
 
-#create an comment
-post '/comment/create/:article_id' do
-  # article = Comment.create(:body => params[:body], :post_id => params[:article_id])
-  @article = Article.get(params[:article_id])
+  #edit logged user
+  get '/account/edit' do
+    @user = current_user
+    haml :'account/edit'
+  end
 
-  @comment = Comment.new
-  @comment.attributes = params[:comment]
-  @comment.article = @article
+  #edit logged user
+  post '/account/update' do
+    @user = current_user
+    flash.error = "Not implemented yet"
+    haml :'account/show'
+  end
 
-  if @comment.valid? # it also checks article.valid?
-    @comment.save
-    redirect "/articles/#{@article.id}"
-  else
+  # users, only admin
+
+  #list of users
+  get '/admin/users' do
+    @users = User.all
+    haml :'users/list'
+  end
+
+  # homepage
+
+  get '/' do
+    @title = 'Welcome!'
+    haml :index, :locals => {:title => @title}
+  end
+
+  # about
+
+  get '/about' do
+    @title = 'About'
+    haml :about
+  end
+
+  #articles
+
+  #list of articles
+  get '/articles' do
+    @title = 'List of articles'
+    @articles = Article.all(:order => [ :id.desc ], :ispublic => true)
+    haml :list
+  end
+
+  #show an article
+  get '/articles/:id' do
+    @article = Article.get params[:id]
+    @comment = Comment.new
     haml :show, :locals => {
       :action => "/comment/create/#{@article.id}"
     }
   end
 
+  #admin
+
+  #list of articles
+  get '/admin/articles' do
+    check_authentication
+    @title = 'List of articles'
+    @articles = Article.all(:order => [ :id.desc ])
+    haml :admin_list
+  end
+
+  #form for new article
+  get '/admin/articles/new' do
+    check_authentication
+    @article = Article.new
+    haml :new, :locals => {
+      :action => '/admin/articles/create'
+    }
+  end
+
+  #create an article
+  post '/admin/articles/create' do
+    check_authentication
+    # article = Article.create(:title => params[:title], :body => params[:body])
+    @article = Article.new
+    @article.attributes = params['article']
+    if @article.valid?
+      @article.save
+      redirect "/admin/articles/#{@article.id}"
+    else
+      haml :new, :locals => {
+        :action => '/admin/articles/create'
+      }
+    end
+  end
+
+  #show an article
+  get '/admin/articles/:id' do
+    check_authentication
+    @article = Article.get params[:id]
+    @comment = Comment.new
+    haml :admin_show
+  end
+
+  #form to edit article
+  get '/admin/articles/:id/edit' do |id|
+    check_authentication
+    @article = Article.get(id)
+    haml :edit, :locals => {
+      :action => "/admin/articles/#{@article.id}/update"
+    }
+  end
+
+  # Edit a article
+  post '/admin/articles/:id/update' do |id|
+    check_authentication
+    @article = Article.get(id)
+
+    if @article.update params[:article]
+     redirect "/admin/articles/#{id}"
+    else
+      haml :edit, :locals => {
+        :action => '/admin/articles/#{@article}/edit'
+      }
+    end
+  end
+
+  # publish a article
+  post '/admin/articles/:id/publish' do |id|
+    check_authentication
+    article = Article.get(id)
+    article.ispublic = params[:ispublic]
+    content_type :json
+    if article.valid?
+      article.save
+      { :id => id, :ispublic => article.ispublic }.to_json
+    else
+      status 400
+      "Article not valid"
+    end
+    # redirect "/admin/articles/#{id}"
+  end
+
+   # Delete a article
+  post '/admin/articles/:id/destroy' do |id|
+    check_authentication
+    article = Article.get(id)
+    article.destroy
+
+    content_type :json
+    { :id => id }.to_json
+    # redirect "/admin/articles"
+  end
+
+  #comments
+
+  #create an comment
+  post '/comment/create/:article_id' do
+    # article = Comment.create(:body => params[:body], :post_id => params[:article_id])
+    @article = Article.get(params[:article_id])
+
+    @comment = Comment.new
+    @comment.attributes = params[:comment]
+    @comment.article = @article
+
+    if @comment.valid? # it also checks article.valid?
+      @comment.save
+      redirect "/articles/#{@article.id}"
+    else
+      haml :show, :locals => {
+        :action => "/comment/create/#{@article.id}"
+      }
+    end
+
+  end
+
+  #exceptions
+
+  not_found do
+    halt 404, 'Page not found'
+  end
+
 end
-
-#users
-
-# DEFAULT ROUTES:
-
-# get '/login'
-# get '/logout'
-# get '/signup'
-# get/post '/users'
-# get '/users/:id'
-# get/post '/users/:id/edit'
-# get '/users/:id/delete'
-
-not_found do
-  halt 404, 'Page not found'
-end
-
-=begin
-  comments
-=end

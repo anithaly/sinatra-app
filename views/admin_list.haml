@@ -1,13 +1,9 @@
-#header
-  %h1
-    Articles
-  %ul.nav.nav-pills
-    %li
-      %a.btn.btn-primary{:href => "/admin/articles/new"} Create an article
+%h1.page-header
+  Articles
 
-.row.articles.col-lg-12
+.articles
   -for a in @articles do
-    %article.well.article{:id => "article#{a.id}"}
+    %article.article{:id => "article#{a.id}"}
       %h3= a.title
       .date
         = a.created_at.strftime("%d %b %Y %H:%M")

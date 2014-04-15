@@ -6,43 +6,10 @@ SITE_TITLE = "Sinatra app"
 # need install dm-sqlite-adapter
 DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blog.db")
 
-class Article
-  include DataMapper::Resource
-  property :id, Serial
-  property :title, String, :required => true, :length => 3..255
-  property :body, Text, :required => true
-  property :ispublic, Boolean, :default  => false
-  property :created_at, DateTime
-  has n, :comments
-  # belongs_to :user
-end
-
-class Comment
-  include DataMapper::Resource
-  property :id, Serial
-  property :body, Text, :required => true
-  property :created_at, DateTime
-  # belongs_to :user
-  belongs_to :article
-end
-
-class User
-  include DataMapper::Resource
-  include BCrypt
-  property :id, Serial, :key => true
-  property :name, String, :length => 3..50
-  property :email, String, :length => 8..50
-  property :password, BCryptHash
-  property :created_at, DateTime
-
-  def authenticate(attempted_password)
-    if self.password == attempted_password
-      true
-    else
-      false
-    end
-  end
-end
+# require models
+require_relative "models/user"
+require_relative "models/article"
+require_relative "models/comment"
 
 # Perform basic sanity checks and initialize all relationships
 # Call this when you've defined all your models

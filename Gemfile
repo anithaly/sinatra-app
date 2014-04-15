@@ -1,13 +1,17 @@
 source 'https://rubygems.org'
+source "http://gems.github.com"
 
-gem 'sinatra'
+#main libs
+gem "sinatra", github:"sinatra/sinatra"
 gem 'warden'
 gem 'sinatra-contrib'
-gem 'sinatra-partial'
 
+#templates
 gem 'haml'
 gem 'json'
+gem 'sinatra-partial'
 
+#db
 gem 'data_mapper'
 gem 'dm-sqlite-adapter'
 gem 'dm-core'
@@ -18,4 +22,5 @@ gem 'dm-migrations'
 gem 'rack-flash3', '1.0.1', require: 'rack/flash'
 gem 'bcrypt'
 
+#debug
 gem 'pry'

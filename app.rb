@@ -29,7 +29,7 @@ class SinatraApp < Sinatra::Base
   configure do
     # enable :sessions
     use Rack::Session::Cookie, secret: "nothingissecretontheinternet"
-    use Rack::Flash, :sweep => true, accessorize: [:error, :success]
+    use Rack::Flash, accessorize: [:error, :success] #:,sweep => true,
     register Sinatra::Partial
   end
 
@@ -65,28 +65,33 @@ class SinatraApp < Sinatra::Base
   end
 
   Warden::Strategies.add(:password) do
+    # flash is not reached
+    # we create a wrap
+    def flash
+      env['x-rack.flash']
+    end
+
     def valid?
       params['email'] && params['password']
     end
 
-    def authenticate!
-      user = User.first(email: params['email'])
-      # binding.pry
-      if user.nil?
-        fail!("The email you entered does not exist.")
-        env['warden.message'] = ""
-      elsif user.authenticate(params['password'])
-        env['warden.message'] = "Successfully Logged In"
-        success!(user)
-      else
-        fail!("Could not log in")
+    # authenticating user
+      def authenticate!
+        # find for user
+        user = User.first(email: params['email'])
+        if user.nil?
+          fail!("Invalid email, doesn't exists!")
+          flash.error = ""
+        elsif user.authenticate(params['password'])
+          flash.success = "Logged in"
+          success!(user)
+        else
+          fail!("There are errors, please try again")
+        end
       end
-    end
-
   end
 
   helpers do
-
     def warden_handler
       env['warden']
     end
@@ -98,19 +103,33 @@ class SinatraApp < Sinatra::Base
     def check_authentication
       redirect '/login' unless warden_handler.authenticated?
     end
-
   end
 
   #auth
 
+  get '/login' do
+    haml :'account/login'
+  end
+
   post '/login' do
+    # call warden strategies
     env['warden'].authenticate!
-    flash.success = env['warden'].message
-    if session[:return_to].nil?
-      redirect '/'
+    # warden message
+    flash[:success] = env['warden'].message || "Successfull login"
+    # came from protected page?
+    if session[:return_to] == '/login' || session[:return_to].nil?
+      redirect "/"
     else
       redirect session[:return_to]
     end
+  end
+
+  # accessing unauthenticated user to protected path
+  post '/unauthenticated' do
+    session[:return_to] = env['warden.options'][:attempted_path]
+    puts env['warden.options'][:attempted_path]
+    flash[:error] = env['warden'].message  || 'Please login to continue'
+    redirect '/login'
   end
 
   get '/logout' do
@@ -118,17 +137,6 @@ class SinatraApp < Sinatra::Base
     env['warden'].logout
     flash.success = 'Successfully logged out'
     redirect '/'
-  end
-
-  post '/unauthenticated' do
-    session[:return_to] = env['warden.options'][:attempted_path]
-    puts env['warden.options'][:attempted_path]
-    flash.error = env['warden'] || "You must log in"
-    redirect '/auth/login'
-  end
-
-  get '/login' do
-    haml :'account/login'
   end
 
   #account

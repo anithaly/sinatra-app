@@ -1,0 +1,14 @@
+%h2.page-header
+  =@category.name
+%div
+  .actions
+    %a.btn.btn-default{:href => "/admin/categories/#{@category.id}/edit"} Edit
+
+%hr/
+
+%h4 Articles
+
+%ul
+  -for comment in @category.articles
+    %li
+      =comment.body

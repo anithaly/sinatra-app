@@ -9,8 +9,16 @@
       %li.divider{:role => "presentation"}
       %li
         %a{:href => "/admin/articles/new"} Nowy
-  %li
-    %a{:href => "#"} Categories
+  %li.dropdown
+    %a{:href => "#", :'data-toggle' => "dropdown", :'data-target' => "#"}
+      Categories
+      .span.caret
+    %ul.dropdown-menu{:role => "menu"}
+      %li
+        %a{:href => "/admin/categories"} Lista
+      %li.divider{:role => "presentation"}
+      %li
+        %a{:href => "/admin/categories/new"} Nowy
   %li
     %a{:href => "#"} Tags
   %li

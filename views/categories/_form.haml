@@ -1,0 +1,10 @@
+- if @category.errors.size > 0
+  .well.text-danger
+    - for e in @category.errors.full_messages.flatten
+      = e
+      %br/
+%form{role: "form", action: "#{action}", method: :post}
+  .form-group
+    %label{:for => "name"} Name
+    %input#name.form-control{:placeholder => "Enter name", :name => "category[name]", :type => "text", :value => "#{@category.name}" }
+  %button.btn.btn-default{:type => "submit"} Save

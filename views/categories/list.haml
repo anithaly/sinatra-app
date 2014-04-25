@@ -1,0 +1,15 @@
+%h1.page-header
+  Categories
+
+.categories
+  -for c in @categories do
+    %article.article{:id => "article#{c.id}"}
+      %h3= c.name
+      .date
+        = c.created_at.strftime("%d %b %Y %H:%M")
+      %p
+        Articles:
+        = c.articles.count
+      .actions
+        %a.btn.btn-default{:href => "/admin/categories/#{c.id}"} Show
+        %a.btn.btn-default{:href => "/admin/categories/#{c.id}/edit"} Edit

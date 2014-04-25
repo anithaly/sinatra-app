@@ -6,5 +6,6 @@ class Article
   property :ispublic, Boolean, :default  => false
   property :created_at, DateTime
   has n, :comments
+  belongs_to :category
   # belongs_to :user
 end

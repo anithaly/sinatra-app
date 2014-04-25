@@ -2,7 +2,7 @@
   Articles
 .articles
   -@articles.each_with_index do |a, key|
-    %article{:id => "article#{a.id}", :class => "#{ (key%2 == 1) ? 'col-md-offset-2' : '' }"}
+    %article{:id => "article#{a.id}"}
       %h3
         %a{:href => "/articles/#{a.id}"} #{a.title}
       .date

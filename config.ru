@@ -1,2 +1,7 @@
-require './app.rb'
+require 'rubygems'
+require 'bundler'
+
+Bundler.require(:default)
+
+require './app'
 run SinatraApp

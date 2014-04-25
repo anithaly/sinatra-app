@@ -1,23 +1,23 @@
-require 'bundler'
-Bundler.require
-
+# encoding: utf-8
 SITE_TITLE = "Sinatra app"
 
 # need install dm-sqlite-adapter
 DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blog.db")
 
-# require models
-require_relative "models/user"
-require_relative "models/article"
-require_relative "models/category"
-require_relative "models/comment"
+# Load up all models next
+Dir[File.dirname(__FILE__) + "/models/*.rb"].each do |file|
+  require file
+end
 
-# Perform basic sanity checks and initialize all relationships
-# Call this when you've defined all your models
 DataMapper.finalize
-# automatically create the tables
 DataMapper.auto_upgrade!
 # DataMapper.auto_migrate!
+
+Dir[File.dirname(__FILE__) + "/controllers/*.rb"].each do |file|
+  require file
+end
+
+# require_relative 'controllers/articles'
 
 if User.count == 0
   @user = User.create(email: "admin@it.works")
@@ -27,7 +27,17 @@ end
 
 class SinatraApp < Sinatra::Base
 
+  # general configs
   configure do
+    set :root          , File.dirname(__FILE__)
+    set :public_folder , File.dirname(__FILE__) + '/public'
+    set :app_file      , __FILE__
+    set :views         , File.dirname(__FILE__) + '/views'
+    set :haml          , :format => :html5
+    # set :tests         , File.dirname(__FILE__) + '/tests'
+    # set :dump_errors   , true
+    # set :logging       , true
+    # set :raise_errors  , true
     # enable :sessions
     use Rack::Session::Cookie, secret: "nothingissecretontheinternet"
     use Rack::Flash, accessorize: [:error, :success] #:,sweep => true,
@@ -93,6 +103,9 @@ class SinatraApp < Sinatra::Base
   end
 
   helpers do
+    # include Rack::Utils
+    # alias_method :h, :escape_html
+
     def warden_handler
       env['warden']
     end
@@ -104,317 +117,6 @@ class SinatraApp < Sinatra::Base
     def check_authentication
       redirect '/login' unless warden_handler.authenticated?
     end
-  end
-
-  #auth
-
-  get '/login' do
-    haml :'account/login'
-  end
-
-  post '/login' do
-    # call warden strategies
-    env['warden'].authenticate!
-    # warden message
-    flash[:success] = env['warden'].message || "Successfull login"
-    # came from protected page?
-    if session[:return_to] == '/login' || session[:return_to].nil?
-      redirect "/"
-    else
-      redirect session[:return_to]
-    end
-  end
-
-  # accessing unauthenticated user to protected path
-  post '/unauthenticated' do
-    session[:return_to] = env['warden.options'][:attempted_path]
-    puts env['warden.options'][:attempted_path]
-    flash[:error] = env['warden'].message  || 'Please login to continue'
-    redirect '/login'
-  end
-
-  get '/logout' do
-    env['warden'].raw_session.inspect
-    env['warden'].logout
-    flash.success = 'Successfully logged out'
-    redirect '/'
-  end
-
-  #account
-
-  get '/signup' do
-    @user = User.new
-    haml :'account/signup'
-  end
-
-  # create a user
-  post '/signup' do
-    @user = User.new(:email => params[:email], :password => params[:password])
-
-    if @user.save
-      flash.success = 'Successfully created account'
-      haml :index
-    else
-      flash.success = 'Fill fields to register'
-      haml :'account/signup'
-    end
-  end
-
-
-  #show logged user
-  get '/account' do
-    # @user = User.get params[:id]
-    @user = current_user
-    haml :'account/show'
-  end
-
-  #edit logged user
-  get '/account/edit' do
-    @user = current_user
-    haml :'account/edit'
-  end
-
-  #edit logged user
-  post '/account/update' do
-    @user = current_user
-    flash.error = "Not implemented yet"
-    haml :'account/show'
-  end
-
-  # users, only admin
-
-  #list of users
-  get '/admin/users' do
-    @users = User.all
-    haml :'users/list'
-  end
-
-  # homepage
-
-  get '/' do
-    @title = 'Welcome!'
-    haml :index, :locals => {:title => @title}
-  end
-
-  # about
-
-  get '/about' do
-    @title = 'About'
-    haml :about
-  end
-
-  #articles
-
-  #list of articles
-  get '/articles' do
-    @title = 'List of articles'
-    @articles = Article.all(:order => [ :id.desc ], :ispublic => true)
-    haml :list
-  end
-
-  #show an article
-  get '/articles/:id' do
-    @article = Article.get params[:id]
-    @comment = Comment.new
-    haml :show, :locals => {
-      :action => "/comment/create/#{@article.id}"
-    }
-  end
-
-  #admin
-
-  #list of articles
-  get '/admin/articles' do
-    check_authentication
-    @title = 'List of articles'
-    @articles = Article.all(:order => [ :id.desc ])
-    haml :'articles/list'
-  end
-
-  #form for new article
-  get '/admin/articles/new' do
-    check_authentication
-    @article = Article.new
-    haml :'articles/new', :locals => {
-      :action => '/admin/articles/create'
-    }
-  end
-
-  #create an article
-  post '/admin/articles/create' do
-    check_authentication
-    # article = Article.create(:title => params[:title], :body => params[:body])
-    @article = Article.new
-    @article.attributes = params['article']
-    if @article.valid?
-      @article.save
-      redirect "/admin/articles/#{@article.id}"
-    else
-      haml :'articles/new', :locals => {
-        :action => '/admin/articles/create'
-      }
-    end
-  end
-
-  #show an article
-  get '/admin/articles/:id' do
-    check_authentication
-    @article = Article.get params[:id]
-    @comment = Comment.new
-    haml :'articles/show'
-  end
-
-  #form to edit article
-  get '/admin/articles/:id/edit' do |id|
-    check_authentication
-    @article = Article.get(id)
-    haml :'articles/edit', :locals => {
-      :action => "/admin/articles/#{@article.id}/update"
-    }
-  end
-
-  # Edit a article
-  post '/admin/articles/:id/update' do |id|
-    check_authentication
-    @article = Article.get(id)
-
-    if @article.update params[:article]
-     redirect "/admin/articles/#{id}"
-    else
-      haml :'articles/edit', :locals => {
-        :action => '/admin/articles/#{@article}/edit'
-      }
-    end
-  end
-
-  # publish a article
-  post '/admin/articles/:id/publish' do |id|
-    check_authentication
-    article = Article.get(id)
-    article.ispublic = params[:ispublic]
-    content_type :json
-    if article.valid?
-      article.save
-      { :id => id, :ispublic => article.ispublic }.to_json
-    else
-      status 400
-      "Article not valid"
-    end
-    # redirect "/admin/articles/#{id}"
-  end
-
-  # Delete a article
-  post '/admin/articles/:id/destroy' do |id|
-    check_authentication
-    article = Article.get(id)
-    article.destroy
-
-    content_type :json
-    { :id => id }.to_json
-    # redirect "/admin/articles"
-  end
-
-  #list of categories
-  get '/admin/categories' do
-    check_authentication
-    @title = 'List of categories'
-    @categories = Category.all(:order => [ :id.desc ])
-    haml :'categories/list'
-  end
-
-  #form for new category
-  get '/admin/categories/new' do
-    check_authentication
-    @category = Category.new
-    haml :'categories/new', :locals => {
-      :action => '/admin/categories/create'
-    }
-  end
-
-  #create an category
-  post '/admin/categories/create' do
-    check_authentication
-    # category = Category.create(:title => params[:title], :body => params[:body])
-    @category = Category.new
-    @category.attributes = params['category']
-    if @category.valid?
-      @category.save
-      redirect "/admin/categories/#{@category.id}"
-    else
-      haml :'categories/new', :locals => {
-        :action => '/admin/categories/create'
-      }
-    end
-  end
-
-  #show an category
-  get '/admin/categories/:id' do
-    check_authentication
-    @category = Category.get params[:id]
-    @comment = Comment.new
-    haml :'categories/show'
-  end
-
-  #form to edit category
-  get '/admin/categories/:id/edit' do |id|
-    check_authentication
-    @category = Category.get(id)
-    haml :'categories/edit', :locals => {
-      :action => "/admin/categories/#{@category.id}/update"
-    }
-  end
-
-  # Edit a category
-  post '/admin/categories/:id/update' do |id|
-    check_authentication
-    @category = Category.get(id)
-
-    if @category.update params[:category]
-     redirect "/admin/categories/#{id}"
-    else
-      haml :'categories/edit', :locals => {
-        :action => '/admin/categories/#{@category}/edit'
-      }
-    end
-  end
-
-  # Delete a category
-  post '/admin/categories/:id/destroy' do |id|
-    check_authentication
-    category = Category.get(id)
-    category.destroy
-
-    content_type :json
-    { :id => id }.to_json
-    # redirect "/admin/categories"
-  end
-
-  #comments
-
-  #create an comment
-  post '/comment/create/:article_id' do
-    # article = Comment.create(:body => params[:body], :post_id => params[:article_id])
-    @article = Article.get(params[:article_id])
-
-    @comment = Comment.new
-    @comment.attributes = params[:comment]
-    @comment.article = @article
-
-    if @comment.valid? # it also checks article.valid?
-      @comment.save
-      redirect "/articles/#{@article.id}"
-    else
-      haml :show, :locals => {
-        :action => "/comment/create/#{@article.id}"
-      }
-    end
-
-  end
-
-  #exceptions
-
-  not_found do
-    halt 404, 'Page not found'
   end
 
 end

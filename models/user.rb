@@ -14,6 +14,8 @@ class User
   property :token, String, length: 0..100
   property :created_at, DateTime
 
+  validates_uniqueness_of :email, :message => "That email address is already taken"
+
   # methods
   def generate_token
     # generate token

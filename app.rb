@@ -50,7 +50,7 @@ class SinatraApp < Sinatra::Base
     config.scope_defaults :default,
       # "strategies" is an array of named methods with which to
       # attempt authentication. We have to define this later.
-      strategies: [:password],
+      strategies: [:hashed_password],
       # The action is a route to send the user to when
       # warden.authenticate! returns a false answer. We'll show
       # this route below.
@@ -64,7 +64,7 @@ class SinatraApp < Sinatra::Base
     env['REQUEST_METHOD'] = 'POST'
   end
 
-  Warden::Strategies.add(:password) do
+  Warden::Strategies.add(:hashed_password) do
     # flash is not reached
     # we create a wrap
     def flash
@@ -142,8 +142,23 @@ class SinatraApp < Sinatra::Base
   #account
 
   get '/signup' do
+    @user = User.new
     haml :'account/signup'
   end
+
+  # create a user
+  post '/signup' do
+    @user = User.new(:email => params[:email], :password => params[:password])
+
+    if @user.save
+      flash.success = 'Successfully created account'
+      haml :index
+    else
+      flash.success = 'Fill fields to register'
+      haml :'account/signup'
+    end
+  end
+
 
   #show logged user
   get '/account' do

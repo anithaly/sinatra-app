@@ -40,3 +40,7 @@ footer {
 footer span {
   padding: 0 15px;
 }
+
+article {
+  margin: 10px 0;
+}

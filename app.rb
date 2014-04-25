@@ -228,14 +228,14 @@ class SinatraApp < Sinatra::Base
     check_authentication
     @title = 'List of articles'
     @articles = Article.all(:order => [ :id.desc ])
-    haml :admin_list
+    haml :'articles/list'
   end
 
   #form for new article
   get '/admin/articles/new' do
     check_authentication
     @article = Article.new
-    haml :new, :locals => {
+    haml :'articles/new', :locals => {
       :action => '/admin/articles/create'
     }
   end
@@ -250,7 +250,7 @@ class SinatraApp < Sinatra::Base
       @article.save
       redirect "/admin/articles/#{@article.id}"
     else
-      haml :new, :locals => {
+      haml :'articles/new', :locals => {
         :action => '/admin/articles/create'
       }
     end
@@ -261,14 +261,14 @@ class SinatraApp < Sinatra::Base
     check_authentication
     @article = Article.get params[:id]
     @comment = Comment.new
-    haml :admin_show
+    haml :'articles/show'
   end
 
   #form to edit article
   get '/admin/articles/:id/edit' do |id|
     check_authentication
     @article = Article.get(id)
-    haml :edit, :locals => {
+    haml :'articles/edit', :locals => {
       :action => "/admin/articles/#{@article.id}/update"
     }
   end
@@ -281,7 +281,7 @@ class SinatraApp < Sinatra::Base
     if @article.update params[:article]
      redirect "/admin/articles/#{id}"
     else
-      haml :edit, :locals => {
+      haml :'articles/edit', :locals => {
         :action => '/admin/articles/#{@article}/edit'
       }
     end

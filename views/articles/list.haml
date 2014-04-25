@@ -1,0 +1,19 @@
+%h1.page-header
+  Articles
+
+.articles
+  -for a in @articles do
+    %article.article{:id => "article#{a.id}"}
+      %h3= a.title
+      .date
+        = a.created_at.strftime("%d %b %Y %H:%M")
+      %p
+        Comments:
+        = a.comments.count
+      .actions
+        %a.btn.btn-default{:href => "/admin/articles/#{a.id}"} Show
+        %a.btn.btn-default{:href => "/admin/articles/#{a.id}/edit"} Edit
+        %form.publish.inline{action: "/admin/articles/#{a.id}/publish", method: :post, ispublic: (a.ispublic) ? 0 : 1}
+          %input.btn.btn-default{:value => (a.ispublic) ? "Hide from public view" : "Publish", :type => "submit" }
+        %form.remove.inline(action="/admin/articles/#{a.id}/destroy" method="post")
+          %input.btn.btn-default{:value => "Delete", :type => "submit" }

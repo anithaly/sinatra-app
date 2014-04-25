@@ -5,6 +5,10 @@
       %br/
 %form{role: "form", action: "#{action}", method: :post}
   .form-group
+    %select{:name => 'article[category_id]'}
+      - Category.all.each do |category|
+        %option{:value => category.id}= category.name
+  .form-group
     %label{:for => "title"} Title
     %input#title.form-control{:placeholder => "Enter title", :name => "article[title]", :type => "text", :value => "#{@article.title}" }
   .form-group

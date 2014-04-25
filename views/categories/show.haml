@@ -9,6 +9,6 @@
 %h4 Articles
 
 %ul
-  -for comment in @category.articles
+  -for article in @category.articles
     %li
-      =comment.body
+      %a{:href => "/admin/articles/#{article.id}"}= article.title
